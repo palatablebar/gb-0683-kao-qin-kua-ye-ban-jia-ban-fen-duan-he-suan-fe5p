@@ -13,6 +13,17 @@
 | M5 工时切段 | 查看并复算工时切段 | `/api/m5_calculate` | `app/modules/m5_calculate/rules.py` | `tests/test_calculate.py` |
 | M6 薪资对账 | 查看并复算薪资对账 | `/api/m6_reconcile` | `app/modules/m6_reconcile/compare.py` | `tests/test_reconcile.py` |
 | M7 周期归档 | 查看并复算周期归档 | `/api/m7_archive` | `app/modules/m7_archive/export_out.py` | `tests/test_archive.py` |
+| M8 付款月结 | 生成付款月结并登记付款 | `/api/m8_monthly` | `app/modules/m8_monthly/rules.py` | `tests/test_monthly.py` |
+
+## 陷阱登记
+
+| TRAP | 现象 | 朴素实现 | 处理 | 处理位置 | 测试 |
+|---|---|---|---|---|---|
+| TRAP-30 | 月薪加班基数 | 按自然日或排班折算，少排班压低基数、补录改动已复核月结 | 月薪/174，取月结生效时人事快照 | `app/modules/m8_monthly/rules.py` | `tests/test_monthly.py::test_monthly_base_is_salary_over_174_independent_of_days_and_shifts` |
+| TRAP-31 | 正常工时重复计薪 | 月薪员工 REGULAR 片段再按倍率收一遍 | REGULAR 记0，仅 OVERTIME/REST/HOLIDAY 收加成 | `app/modules/m8_monthly/rules.py` | `tests/test_monthly.py::test_monthly_premiums_only_on_overtime_rest_holiday_parts` |
+| TRAP-32 | 规则变化污染旧单 | 新结果覆盖已复核工资 | 同期间旧单作废留档，新 run_id 落新单 | `app/store.py` | `tests/test_monthly.py::test_roster_change_voids_old_settlement_but_keeps_history` |
+| TRAP-33 | 重跑重复付款 | 每次提交生成一笔付款 | run_id 幂等 + payments 主键去重 | `app/store.py` | `tests/test_monthly.py::test_payment_is_idempotent_and_voided_run_cannot_be_paid` |
+| TRAP-34 | 算薪失败丢旧版 | 写库中途失败留下半成品 | 先算后写、事务回滚，旧有效单保留 | `app/main.py` | `tests/test_monthly.py::test_failed_generation_keeps_previous_settlement_effective` |
 
 ## 陷阱登记
 

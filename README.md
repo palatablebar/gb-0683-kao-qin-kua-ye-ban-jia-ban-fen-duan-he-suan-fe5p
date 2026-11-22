@@ -19,6 +19,13 @@ docker compose up --build -d
 - 工时切段：`/m5_calculate`、`/api/m5_calculate`
 - 薪资对账：`/m6_reconcile`、`/api/m6_reconcile`
 - 周期归档：`/m7_archive`、`/api/m7_archive`
+- 付款月结：`/m8_monthly`、`/api/m8_monthly`（付款登记 `POST /api/settlements/<run_id>/payment`，台账 `GET /api/settlements`）
+
+## 月薪加班基数裁决
+
+月薪员工加班基数 = **月结生效时人事快照月薪 ÷ 21.75 ÷ 8（即 ÷174 小时）**，与自然日和实际排班无关；月薪固定部分只按入离职在职自然日折算。这样少排班不会压低基数，排班补录也改不动已复核月结。REGULAR 工时由月薪覆盖不重复计，仅 1.5/2/3 倍片段收加成；计时员工按打卡时薪逐片段计，与 M5 金额一致。完整口径见 `docs/DATA-DICTIONARY.md`。
+
+入离职、排班或规则变化产生新批次，同期间旧月结自动作废留档（原件不删）；新结果算失败时旧版保留；同源重跑复用 run_id，付款登记幂等不重复付款；页面与导出只呈现有效月结。`sample_data/monthly.csv` 配 `sample_data/roster.json` 为混合批次样例（计时、全月月薪、月中入职、月中离职、无班次新员工，含跨夜越假日）。
 
 ## 核心规则
 

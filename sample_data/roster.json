@@ -1,0 +1,7 @@
+[
+  {"employee": "H001", "pay_type": "hourly", "monthly_salary": null, "hire_date": null, "leave_date": null},
+  {"employee": "M001", "pay_type": "monthly", "monthly_salary": "8700.00", "hire_date": "2026-01-01", "leave_date": null},
+  {"employee": "M002", "pay_type": "monthly", "monthly_salary": "6960.00", "hire_date": "2026-10-08", "leave_date": null},
+  {"employee": "M003", "pay_type": "monthly", "monthly_salary": "10440.00", "hire_date": "2026-03-02", "leave_date": "2026-10-09"},
+  {"employee": "M004", "pay_type": "monthly", "monthly_salary": "5580.00", "hire_date": "2026-10-08", "leave_date": null}
+]

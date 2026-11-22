@@ -20,7 +20,15 @@ def create_app():
     def health():return jsonify(status='ok')
     @app.post('/api/runs')
     def submit():
-        content,params=payload();state=run(content,params);return jsonify(store.save(state['run_id'],state))
+        content,params=payload()
+        # 先完整算出新结果；生成失败直接返回，旧批次与旧月结原样保留。
+        state=run(content,params)
+        try:
+            return jsonify(store.save(state['run_id'],state))
+        except Exception:
+            # 写库异常时回滚事务，避免留下半成品月结。
+            with store.connection() as db:db.rollback()
+            raise
     @app.get('/api/runs')
     def list_runs():return jsonify(store.history())
     @app.get('/api/runs/<run_id>')
@@ -30,14 +38,26 @@ def create_app():
         data=request.get_json(silent=True) or {}
         if not isinstance(data.get('version'),int):raise DomainError('VERSION','请提交复核版本')
         return jsonify(store.review(run_id,data['version'],data.get('decision')))
+    @app.post('/api/settlements/<run_id>/payment')
+    def pay(run_id):
+        return jsonify(store.mark_paid(run_id))
+    @app.get('/api/settlements')
+    def settlements():
+        return jsonify(store.list_settlements())
     @app.get('/api/archive/<run_id>/export.csv')
     def download(run_id):
         state=store.get(run_id)
-        if not state.get('reconcile',{}).get('balanced'):raise DomainError('UNBALANCED','对账未平')
+        if 'monthly' in state:
+            settlement=state.get('settlement') or {}
+            if settlement.get('status')!='有效':raise DomainError('VOID','月结单已作废，导出只呈现有效结果',409)
+            if not state['monthly'].get('balanced'):raise DomainError('UNBALANCED','月结未平')
+            state['payment']=store.payment(run_id)
+        elif not state.get('reconcile',{}).get('balanced'):raise DomainError('UNBALANCED','对账未平')
         return Response(bundle(state),mimetype='text/csv; charset=utf-8',headers={'Content-Disposition':'attachment; filename=evidence.csv'})
     with app.app_context():
         if not store.history():
-            state=run(load('dirty.csv'),{});store.save(state['run_id'],state)
+            # 初始种子只跑到归档（M7），不生成付款月结；月结必须由人事快照显式触发。
+            state=run(load('dirty.csv'),{},7);store.save(state['run_id'],state)
     return app
 
 app=create_app()
